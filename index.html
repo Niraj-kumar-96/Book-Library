@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Books API Manager</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        h2 {
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        .book {
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .book:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .available {
+            background-color: #f0fff4;
+            border-left: 5px solid #48bb78;
+        }
+        .unavailable {
+            background-color: #fed7d7;
+            border-left: 5px solid #f56565;
+        }
+        form {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 5px;
+            flex: 1;
+            min-width: 150px;
+        }
+        input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        button {
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #3182ce;
+        }
+        .delete-btn {
+            background-color: #e53e3e;
+            margin-left: auto;
+        }
+        .delete-btn:hover {
+            background-color: #c53030;
+        }
+        .load-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            input[type="text"], input[type="number"] {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Books API Manager</h1>
+
+        <h2>All Books</h2>
+        <div class="load-buttons">
+            <button onclick="loadBooks()">Load All Books</button>
+            <button onclick="loadAvailableBooks()">Load Available Books</button>
+        </div>
+        <div id="booksList"></div>
+
+        <h2>Add New Book</h2>
+        <form id="addBookForm">
+            <input type="text" id="title" placeholder="Title" required>
+            <input type="text" id="author" placeholder="Author" required>
+            <label><input type="checkbox" id="available"> Available</label>
+            <button type="submit">Add Book</button>
+        </form>
+
+        <h2>Update Book</h2>
+        <form id="updateBookForm">
+            <input type="number" id="updateId" placeholder="Book ID" required>
+            <input type="text" id="updateTitle" placeholder="New Title">
+            <input type="text" id="updateAuthor" placeholder="New Author">
+            <label><input type="checkbox" id="updateAvailable"> Available</label>
+            <button type="submit">Update Book</button>
+        </form>
+
+        <h2>Delete Book</h2>
+        <form id="deleteBookForm">
+            <input type="number" id="deleteId" placeholder="Book ID" required>
+            <button type="submit">Delete Book</button>
+        </form>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+
+        async function loadBooks() {
+            try {
+                const response = await fetch(`${API_BASE}/books`);
+                const books = await response.json();
+                displayBooks(books);
+            } catch (error) {
+                alert('Error loading books: ' + error.message);
+            }
+        }
+
+        async function loadAvailableBooks() {
+            try {
+                const response = await fetch(`${API_BASE}/books/available`);
+                const books = await response.json();
+                displayBooks(books);
+            } catch (error) {
+                alert('Error loading available books: ' + error.message);
+            }
+        }
+
+        function displayBooks(books) {
+            const booksList = document.getElementById('booksList');
+            booksList.innerHTML = '';
+            books.forEach(book => {
+                const bookDiv = document.createElement('div');
+                bookDiv.className = `book ${book.available ? 'available' : 'unavailable'}`;
+                bookDiv.innerHTML = `
+                    <strong>ID: ${book.id}</strong><br>
+                    Title: ${book.title}<br>
+                    Author: ${book.author}<br>
+                    Available: ${book.available ? 'Yes' : 'No'}
+                    <button class="delete-btn" onclick="deleteBook(${book.id})">Delete</button>
+                `;
+                booksList.appendChild(bookDiv);
+            });
+        }
+
+        document.getElementById('addBookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const available = document.getElementById('available').checked;
+
+            try {
+                const response = await fetch(`${API_BASE}/books`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, author, available })
+                });
+                const newBook = await response.json();
+                if (response.ok) {
+                    alert('Book added successfully!');
+                    loadBooks();
+                    document.getElementById('addBookForm').reset();
+                } else {
+                    alert('Error: ' + newBook.error);
+                }
+            } catch (error) {
+                alert('Error adding book: ' + error.message);
+            }
+        });
+
+        document.getElementById('updateBookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('updateId').value;
+            const title = document.getElementById('updateTitle').value;
+            const author = document.getElementById('updateAuthor').value;
+            const available = document.getElementById('updateAvailable').checked;
+
+            const updateData = {};
+            if (title) updateData.title = title;
+            if (author) updateData.author = author;
+            updateData.available = available;
+
+            try {
+                const response = await fetch(`${API_BASE}/books/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+                const updatedBook = await response.json();
+                if (response.ok) {
+                    alert('Book updated successfully!');
+                    loadBooks();
+                    document.getElementById('updateBookForm').reset();
+                } else {
+                    alert('Error: ' + updatedBook.error);
+                }
+            } catch (error) {
+                alert('Error updating book: ' + error.message);
+            }
+        });
+
+        document.getElementById('deleteBookForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('deleteId').value;
+            deleteBook(id);
+        });
+
+        async function deleteBook(id) {
+            try {
+                const response = await fetch(`${API_BASE}/books/${id}`, {
+                    method: 'DELETE'
+                });
+                const deletedBook = await response.json();
+                if (response.ok) {
+                    alert('Book deleted successfully!');
+                    loadBooks();
+                    document.getElementById('deleteBookForm').reset();
+                } else {
+                    alert('Error: ' + deletedBook.error);
+                }
+            } catch (error) {
+                alert('Error deleting book: ' + error.message);
+            }
+        }
+
+        // Load books on page load
+        loadBooks();
+    </script>
+</body>
+</html>
